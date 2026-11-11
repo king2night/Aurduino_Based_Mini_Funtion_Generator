@@ -1,0 +1,112 @@
+// Frequency control
+const int freqPin = A0;
+
+// Amplitude control
+const int ampPin = A5;
+
+// Assigning buttons to respective waveforms
+const int sineBtn = A1;
+const int squareBtn = A2;
+const int triangleBtn = A3;
+const int sawBtn = A4;
+
+// 64 samples for one complete waveform cycle
+const int N = 64;
+
+// 64 values for one complete sine cycle
+byte sineTable[N] = {
+  32,35,38,41,44,47,50,53,
+  55,58,59,60,61,62,63,63,
+  63,63,62,61,60,59,58,55,
+  53,50,47,44,41,38,35,32,
+  28,25,22,19,16,13,10,8,
+  6,5,4,3,2,1,0,0,
+  0,0,1,2,3,4,5,6,
+  8,10,13,16,19,22,25,28
+};
+
+int waveform = 0;
+int index = 0;
+
+void setup()
+{
+  // Making D2-D7 output pins for the 6-bit DAC
+  pinMode(2, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+
+  // Waveform selection buttons
+  pinMode(sineBtn, INPUT_PULLUP);
+  pinMode(squareBtn, INPUT_PULLUP);
+  pinMode(triangleBtn, INPUT_PULLUP);
+  pinMode(sawBtn, INPUT_PULLUP);
+}
+
+void loop()
+{
+  // Selecting waveform
+  if (digitalRead(sineBtn) == LOW) {
+    waveform = 0;
+  }
+
+  if (digitalRead(squareBtn) == LOW) {
+    waveform = 1;
+  }
+
+  if (digitalRead(triangleBtn) == LOW) {
+    waveform = 2;
+  }
+
+  if (digitalRead(sawBtn) == LOW) {
+    waveform = 3;
+  }
+
+  // Frequency control
+  int pot = analogRead(freqPin);
+  int delayTime = map(pot, 0, 1023, 1000, 20);
+
+  // Amplitude control
+  int ampValue = analogRead(ampPin);
+
+  // Generate waveform
+  byte value;
+
+  // SQUARE
+  if (waveform == 1) {
+    value = (index < 32) ? 63 : 0;
+  }
+
+  // SINE
+  else if (waveform == 0) {
+    value = sineTable[index];
+  }
+
+  // TRIANGLE
+  else if (waveform == 2) {
+    if (index < 32)
+      value = index * 2;
+    else
+      value = 63 - ((index - 32) * 2);
+  }
+
+  // SAWTOOTH
+  else {
+    value = index;
+  }
+
+  // Send 6-bit value to D2-D7
+  PORTD = value << 2;
+
+  // Move to next sample
+  index++;
+
+  if (index >= 64) {
+    index = 0;
+  }
+
+  // Control waveform frequency
+  delayMicroseconds(delayTime);
+}
